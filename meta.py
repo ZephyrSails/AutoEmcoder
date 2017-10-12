@@ -76,34 +76,29 @@ if __name__ == '__main__':
         logging.error('--embs must include 2 or more original embeddings')
 
     original_embs, wordsets, _, concat_dim = get_embs(args.embs)
-    wordlist = list(reduce(lambda a, b: a & b, wordsets))
+    # wordlist = list(reduce(lambda a, b: a & b, wordsets))
     fullwordlist = list(reduce(lambda a, b: a | b, wordsets))
-    concated_embs = concat_embs(original_embs, wordlist)
+    # concated_embs = concat_embs(original_embs, wordlist)
     full_concated_embs = full_concat_embs(original_embs, fullwordlist)
 
     merger = AutoencoderEmbMerger(args)
-    meta, predict = merger.encode(concated_embs)
+    meta, predict = merger.encode(full_concated_embs)
     logging.info('outputting meta embedding')
     with open(args.result, 'wb') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerow(['text'] + ['d%d' % i for i in xrange(args.meta_dim)])
-        for i, word in enumerate(wordlist):
+        for i, word in enumerate(fullwordlist):
             writer.writerow([word] + list(meta[i]))
     logging.info('outputting predicted result')
     with open('predict_' + args.result, 'wb') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerow(['text'] + ['d%d' % i for i in xrange(concat_dim)])
-        for i, word in enumerate(wordlist):
+        for i, word in enumerate(fullwordlist):
             writer.writerow([word] + list(predict[i]))
-    logging.info('outputting concated embedding')
-    with open('concat_' + args.result, 'wb') as csvfile:
-        writer = csv.writer(csvfile, delimiter=',')
-        writer.writerow(['text'] + ['d%d' % i for i in xrange(concat_dim)])
-        for i, word in enumerate(wordlist):
-            writer.writerow([word] + list(concated_embs[i]))
     logging.info('outputting concated all embedding')
     with open('concat_all_' + args.result, 'wb') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerow(['text'] + ['d%d' % i for i in xrange(concat_dim)])
         for i, word in enumerate(fullwordlist):
             writer.writerow([word] + list(full_concated_embs[i]))
+    logging.info('All Done, Cheers!')

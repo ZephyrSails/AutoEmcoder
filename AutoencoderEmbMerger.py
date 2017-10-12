@@ -18,7 +18,8 @@ class AutoencoderEmbMerger:
         weight = tf.Variable(tf.random_normal([input_rank, self.meta_dim]))
         bias = tf.Variable(tf.random_normal([self.meta_dim]))
         # Encoder Hidden layer with sigmoid activation #1
-        layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weight), bias))
+        # layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weight), bias))
+        layer_1 = tf.add(tf.matmul(x, weight), bias)
         return layer_1
 
     # Building single layer decoder
@@ -26,7 +27,8 @@ class AutoencoderEmbMerger:
         weight = tf.Variable(tf.random_normal([self.meta_dim, input_rank]))
         bias = tf.Variable(tf.random_normal([input_rank]))
         # Decoder Hidden layer with sigmoid activation #1
-        layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weight), bias))
+        # layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weight), bias))
+        layer_1 = tf.add(tf.matmul(x, weight), bias)
         return layer_1
 
     def _mergeEmbs(self, embs, word):

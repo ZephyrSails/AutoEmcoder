@@ -17,7 +17,7 @@ def _eval_all(emb_path):
     score_dict = {}
     score_dict['score'] = 0
     ##### UPDATE TO PATH OF Test_Input #####
-    for root,dirs,files in os.walk('/Users/xiu/Desktop/499/AutoToy/Test_Input'):
+    for root,dirs,files in os.walk('Test_Input'):
         files = [testfile for testfile in files if testfile[0]!='.']
         for testfile in files:
             f_path = 'Test_Input/'+testfile
