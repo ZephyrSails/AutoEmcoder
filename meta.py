@@ -16,6 +16,8 @@ parser.add_argument('--embs', nargs='+',
 parser.add_argument('--result', type=str)
 parser.add_argument('--meta_dim', type=int, default=100,
                     help='the dimension of output meta embedding')
+parser.add_argument('--testing_size', type=int, default=0,
+                    help='testing set size')
 parser.add_argument('--learning_rate', type=float, default=0.01,
                     help='autoencoder learning rate')
 parser.add_argument('--num_steps', type=int, default=5000,
@@ -65,9 +67,18 @@ def full_concat_embs(original_embs, wordlist):
             else:
                 concat += [0.0 for _ in xrange(original_embs[i][__DIMENTION__])]
         concated_embs.append(concat)
-        # concated_embs.append(reduce(lambda a, b: a + b, ([word] for i in )))
     return concated_embs
 
+
+def output(wordlist, embedding, file_prefix, args):
+    file_name = file_prefix + args.result
+    logging.info('outputting to %s' % file_name)
+    with open(file_name, 'wb') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerow(['text'] + ['d%d' % i for i in xrange(len(embedding[0]))])
+        logging.info('emblen: %d, wlLen: %d' % (len(embedding), len(wordlist)))
+        for i, word in enumerate(wordlist):
+            writer.writerow([word] + list(embedding[i]))
 
 # python meta.py --embs '/Users/xiu/github/AutoEncoderTrail/agriculture_40.csv' '/Users/xiu/github/AutoEncoderTrail/books_40.csv' --result 'meta_5000_oct_9.csv' --display_step 1 --num_steps 5000
 if __name__ == '__main__':
@@ -75,30 +86,42 @@ if __name__ == '__main__':
     if len(args.embs) < 2:
         logging.error('--embs must include 2 or more original embeddings')
 
-    original_embs, wordsets, _, concat_dim = get_embs(args.embs)
+    original_embs, wordsets, _, _ = get_embs(args.embs)
     # wordlist = list(reduce(lambda a, b: a & b, wordsets))
     fullwordlist = list(reduce(lambda a, b: a | b, wordsets))
     # concated_embs = concat_embs(original_embs, wordlist)
     full_concated_embs = full_concat_embs(original_embs, fullwordlist)
 
     merger = AutoencoderEmbMerger(args)
-    meta, predict = merger.encode(full_concated_embs)
-    logging.info('outputting meta embedding')
-    with open(args.result, 'wb') as csvfile:
+    meta, predict, l_history, v_history = merger.encode(full_concated_embs, args.testing_size)
+
+    output(fullwordlist, meta, '', args)
+    output(fullwordlist, predict, 'predict_', args)
+    output(fullwordlist, full_concated_embs, 'concat_all_', args)
+
+    with open('l_' + args.result, 'wb') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
-        writer.writerow(['text'] + ['d%d' % i for i in xrange(args.meta_dim)])
-        for i, word in enumerate(fullwordlist):
-            writer.writerow([word] + list(meta[i]))
-    logging.info('outputting predicted result')
-    with open('predict_' + args.result, 'wb') as csvfile:
+        for l in l_history:
+            writer.writerow([l])
+    with open('v_' + args.result, 'wb') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
-        writer.writerow(['text'] + ['d%d' % i for i in xrange(concat_dim)])
-        for i, word in enumerate(fullwordlist):
-            writer.writerow([word] + list(predict[i]))
-    logging.info('outputting concated all embedding')
-    with open('concat_all_' + args.result, 'wb') as csvfile:
-        writer = csv.writer(csvfile, delimiter=',')
-        writer.writerow(['text'] + ['d%d' % i for i in xrange(concat_dim)])
-        for i, word in enumerate(fullwordlist):
-            writer.writerow([word] + list(full_concated_embs[i]))
+        for v in v_history:
+            writer.writerow([v])
+    # with open(args.result, 'wb') as csvfile:
+    #     writer = csv.writer(csvfile, delimiter=',')
+    #     writer.writerow(['text'] + ['d%d' % i for i in xrange(args.meta_dim)])
+    #     for i, word in enumerate(fullwordlist):
+    #         writer.writerow([word] + list(meta[i]))
+    # logging.info('outputting predicted result')
+    # with open('predict_' + args.result, 'wb') as csvfile:
+    #     writer = csv.writer(csvfile, delimiter=',')
+    #     writer.writerow(['text'] + ['d%d' % i for i in xrange(concat_dim)])
+    #     for i, word in enumerate(fullwordlist):
+    #         writer.writerow([word] + list(predict[i]))
+    # logging.info('outputting concated all embedding')
+    # with open('concat_all_' + args.result, 'wb') as csvfile:
+    #     writer = csv.writer(csvfile, delimiter=',')
+    #     writer.writerow(['text'] + ['d%d' % i for i in xrange(concat_dim)])
+    #     for i, word in enumerate(fullwordlist):
+    #         writer.writerow([word] + list(full_concated_embs[i]))
     logging.info('All Done, Cheers!')
