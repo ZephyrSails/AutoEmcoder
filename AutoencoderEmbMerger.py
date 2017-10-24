@@ -12,14 +12,22 @@ class AutoencoderEmbMerger:
         self.learning_rate = args.learning_rate
         self.num_steps = args.num_steps
         self.display_step = args.display_step
+        self.activation = args.activation
 
     # Building single layer encoder
     def _encoder(self, x, input_rank):
         weight = tf.Variable(tf.random_normal([input_rank, self.meta_dim]))
         bias = tf.Variable(tf.random_normal([self.meta_dim]))
         # Encoder Hidden layer with sigmoid activation #1
+        layer_1_before_act = tf.add(tf.matmul(x, weight), bias)
+        if self.activation == None:
+            layer_1 = layer_1_before_act
+        if self.activation == 'sigmoid':
+            layer_1 = tf.nn.sigmoid(layer_1_before_act)
+        if self.activation == 'tanh':
+            layer_1 = tf.nn.tanh(layer_1_before_act)
+
         # layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weight), bias))
-        layer_1 = tf.add(tf.matmul(x, weight), bias)
         return layer_1
 
     # Building single layer decoder
@@ -71,11 +79,11 @@ class AutoencoderEmbMerger:
 
         # Define loss and optimizer, minimize the squared error
         logging.debug("Define loss and optimizer, minimize the squared error")
-        # loss = tf.reduce_mean(tf.pow(y_true - y_pred, 2))
+        loss = tf.reduce_mean(tf.pow(y_true - y_pred, 2))
 
-        normalize_true = tf.nn.l2_normalize(y_true, 1)
-        normalize_pred = tf.nn.l2_normalize(y_pred, 1)
-        loss = tf.losses.cosine_distance(normalize_true, normalize_pred, 1)
+        # normalize_true = tf.nn.l2_normalize(y_true, 1)
+        # normalize_pred = tf.nn.l2_normalize(y_pred, 1)
+        # loss = tf.losses.cosine_distance(normalize_true, normalize_pred, 1)
         optimizer = tf.train.RMSPropOptimizer(
             self.learning_rate
         ).minimize(loss)

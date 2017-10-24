@@ -66,4 +66,5 @@ def _eval_sim(testfile, inp_emb):
 reload(sys)  # Reload does the trick!
 sys.setdefaultencoding('UTF8')
 
-print _eval_all(sys.argv[1])
+if __name__ == '__main__':
+    print _eval_all(sys.argv[1])
