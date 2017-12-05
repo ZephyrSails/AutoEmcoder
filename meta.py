@@ -1,6 +1,7 @@
 from __future__ import division, print_function, absolute_import
 
 import utils
+from SVDEmbMerger import SVDEmbMerger
 from AutoencoderEmbMerger import AutoencoderEmbMerger
 import argparse
 import logging
@@ -50,7 +51,7 @@ def full_concat_embs(original_embs, wordlist):
             if word in original_embs[i]:
                 concat += map(float, original_embs[i][word])
             else:
-                concat += [0.0 for _ in xrange(original_embs[i][__DIMENTION__])]
+                concat += [0.0 for _ in xrange(original_embs[i][utils.__DIMENTION__])]
         concated_embs.append(concat)
     return concated_embs
 
@@ -59,8 +60,8 @@ def full_overlay_embs(original_embs, wordlist):
     overlay_embs = []
 
     for word in wordlist:
-        # concat = np.array([0.0 for _ in xrange(len(original_embs[0][__DIMENTION__]))])
-        concat = np.zeros(original_embs[0][__DIMENTION__])
+        # concat = np.array([0.0 for _ in xrange(len(original_embs[0][utils.__DIMENTION__]))])
+        concat = np.zeros(original_embs[0][utils.__DIMENTION__])
         for i in xrange(len(original_embs)):
             if word in original_embs[i]:
                 # print(concat, np.array(original_embs[i][word]))
@@ -68,7 +69,7 @@ def full_overlay_embs(original_embs, wordlist):
                 # print(original_embs[i][word])
                 concat += np.array(map(float, original_embs[i][word]))
             # else:
-                # concat += np.array([0.0 for _ in xrange(original_embs[i][__DIMENTION__])])
+                # concat += np.array([0.0 for _ in xrange(original_embs[i][utils.__DIMENTION__])])
         overlay_embs.append(list(concat))
     return overlay_embs
 
@@ -92,7 +93,7 @@ if __name__ == '__main__':
     if len(args.embs) < 2:
         logging.error('--embs must include 2 or more original embeddings')
 
-    original_embs, wordsets, _, _ = get_embs(args.embs)
+    original_embs, wordsets, _, _ = utils.get_embs(args.embs)
     # wordlist = list(reduce(lambda a, b: a & b, wordsets))
     fullwordlist = list(reduce(lambda a, b: a | b, wordsets))
     # concated_embs = concat_embs(original_embs, wordlist)
@@ -117,7 +118,7 @@ if __name__ == '__main__':
             for v in v_history:
                 writer.writerow([v])
     elif args.method == 'svd':
-        merger = AutoencoderEmbMerger(args)
+        merger = SVDEmbMerger(args)
         meta = merger.encode(target_embs)
 
     output(fullwordlist, meta, '', args)
