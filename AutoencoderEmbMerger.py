@@ -16,28 +16,54 @@ class AutoencoderEmbMerger:
 
     # Building single layer encoder
     def _encoder(self, x, input_rank):
-        weight = tf.Variable(tf.random_normal([input_rank, self.meta_dim]))
-        bias = tf.Variable(tf.random_normal([self.meta_dim]))
-        # Encoder Hidden layer with sigmoid activation #1
-        layer_1_before_act = tf.add(tf.matmul(x, weight), bias)
-        if self.activation == None:
-            layer_1 = layer_1_before_act
-        if self.activation == 'sigmoid':
-            layer_1 = tf.nn.sigmoid(layer_1_before_act)
-        if self.activation == 'tanh':
-            layer_1 = tf.nn.tanh(layer_1_before_act)
 
-        # layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weight), bias))
-        return layer_1
+        weight1 = tf.Variable(tf.random_normal([input_rank, 200]))
+        bias1 = tf.Variable(tf.random_normal([200]))
+        weight2 = tf.Variable(tf.random_normal([200, self.meta_dim]))
+        bias2 = tf.Variable(tf.random_normal([self.meta_dim]))
+
+        # layer_1 = tf.tanh(tf.add(tf.matmul(x, weight1), bias1))
+        # # Encoder Hidden layer with sigmoid activation #2
+        # layer_2 = tf.tanh(tf.add(tf.matmul(layer_1, weight2), bias2))
+
+        layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weight1), bias1))
+        # Encoder Hidden layer with sigmoid activation #2
+        layer_2 = tf.nn.sigmoid(tf.add(tf.matmul(layer_1, weight2), bias2))
+
+        return layer_2
+        # weight = tf.Variable(tf.random_normal([input_rank, self.meta_dim]))
+        # bias = tf.Variable(tf.random_normal([self.meta_dim]))
+        # Encoder Hidden layer with sigmoid activation #1
+        # layer_1_before_act = tf.add(tf.matmul(x, weight), bias)
+        # if self.activation == None:
+        #     layer_1 = layer_1_before_act
+        # if self.activation == 'sigmoid':
+        #     layer_1 = tf.nn.sigmoid(layer_1_before_act)
+        # if self.activation == 'tanh':
+        #     layer_1 = tf.nn.tanh(layer_1_before_act)
+        # return layer_1
 
     # Building single layer decoder
     def _decoder(self, x, input_rank):
-        weight = tf.Variable(tf.random_normal([self.meta_dim, input_rank]))
-        bias = tf.Variable(tf.random_normal([input_rank]))
-        # Decoder Hidden layer with sigmoid activation #1
-        # layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weight), bias))
-        layer_1 = tf.add(tf.matmul(x, weight), bias)
-        return layer_1
+        weight1 = tf.Variable(tf.random_normal([self.meta_dim, 200]))
+        bias1 = tf.Variable(tf.random_normal([200]))
+        weight2 = tf.Variable(tf.random_normal([200, input_rank]))
+        bias2 = tf.Variable(tf.random_normal([input_rank]))
+
+        # layer_1 = tf.tanh(tf.add(tf.matmul(x, weight1), bias1))
+        # # Encoder Hidden layer with sigmoid activation #2
+        # layer_2 = tf.add(tf.matmul(layer_1, weight2), bias2)
+
+        layer_1 = tf.nn.sigmoid(tf.add(tf.matmul(x, weight1), bias1))
+        # Encoder Hidden layer with sigmoid activation #2
+        layer_2 = tf.add(tf.matmul(layer_1, weight2), bias2)
+        return layer_2
+
+        # weight = tf.Variable(tf.random_normal([self.meta_dim, input_rank]))
+        # bias = tf.Variable(tf.random_normal([input_rank]))
+        # # Decoder Hidden layer with sigmoid activation #1
+        # layer_1 = tf.add(tf.matmul(x, weight), bias)
+        # return layer_1
 
     def _mergeEmbs(self, embs, word):
         x = []

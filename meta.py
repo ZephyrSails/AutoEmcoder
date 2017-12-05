@@ -1,5 +1,6 @@
 from __future__ import division, print_function, absolute_import
 
+import utils
 from AutoencoderEmbMerger import AutoencoderEmbMerger
 import argparse
 import logging
@@ -8,8 +9,8 @@ import sys
 import time
 import tensorflow as tf
 from sim_benchmark import _eval_all
+import numpy as np
 
-__DIMENTION__ = '__dim__'
 
 parser = argparse.ArgumentParser(description='args for meta')
 parser.add_argument('--embs', nargs='+',
@@ -25,33 +26,13 @@ parser.add_argument('--num_steps', type=int, default=5000,
                     help='autoencoder learning steps')
 parser.add_argument('--display_step', type=int, default=1000,
                     help='autoencoder logging steps')
+parser.add_argument('--method', type=str, default='autoemcoder',
+                    help='autoemcoder, svd')
 parser.add_argument('--embs_type', type=str, default='vecshare')
 parser.add_argument('--activation', type=str, default=None)
+parser.add_argument('--meta_target', type=str, default='concat')
 # parser.add_argument('--i', type=int, default=0)
 args = parser.parse_args()
-
-
-def get_embs(embs_list):
-    embs, wordsets, shapes, concat_dim = [], [], [], 0
-    for file_name in embs_list:
-        embs.append({})
-        wordsets.append(set())
-        with open(file_name, 'rb') as csvfile:
-            reader = csv.reader(csvfile, delimiter=',')
-            embs[-1][__DIMENTION__] = len(next(reader, None)) - 1
-            concat_dim += embs[-1][__DIMENTION__]
-            # shapes.append(len(next(reader, None)) - 1)
-            len(next(reader, None))
-            count = 0
-            for row in reader:
-                if not row:
-                    continue
-                count += 1
-                embs[-1][row[0]] = row[1:]
-                wordsets[-1].add(row[0])
-        logging.info('%s has been load: %d lines, %s rank.'
-                     % (file_name, count, embs[-1][__DIMENTION__]))
-    return embs, wordsets, shapes, concat_dim
 
 
 def concat_embs(original_embs, wordlist):
@@ -67,11 +48,29 @@ def full_concat_embs(original_embs, wordlist):
         concat = []
         for i in xrange(len(original_embs)):
             if word in original_embs[i]:
-                concat += original_embs[i][word]
+                concat += map(float, original_embs[i][word])
             else:
                 concat += [0.0 for _ in xrange(original_embs[i][__DIMENTION__])]
         concated_embs.append(concat)
     return concated_embs
+
+
+def full_overlay_embs(original_embs, wordlist):
+    overlay_embs = []
+
+    for word in wordlist:
+        # concat = np.array([0.0 for _ in xrange(len(original_embs[0][__DIMENTION__]))])
+        concat = np.zeros(original_embs[0][__DIMENTION__])
+        for i in xrange(len(original_embs)):
+            if word in original_embs[i]:
+                # print(concat, np.array(original_embs[i][word]))
+                # print(concat)
+                # print(original_embs[i][word])
+                concat += np.array(map(float, original_embs[i][word]))
+            # else:
+                # concat += np.array([0.0 for _ in xrange(original_embs[i][__DIMENTION__])])
+        overlay_embs.append(list(concat))
+    return overlay_embs
 
 
 def output(wordlist, embedding, file_prefix, args):
@@ -86,6 +85,7 @@ def output(wordlist, embedding, file_prefix, args):
 
     logging.info(_eval_all(file_name))
 
+
 # python meta.py --embs '/Users/xiu/github/AutoEncoderTrail/agriculture_40.csv' '/Users/xiu/github/AutoEncoderTrail/books_40.csv' --result 'meta_5000_oct_9.csv' --display_step 1 --num_steps 5000
 if __name__ == '__main__':
     logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
@@ -96,22 +96,30 @@ if __name__ == '__main__':
     # wordlist = list(reduce(lambda a, b: a & b, wordsets))
     fullwordlist = list(reduce(lambda a, b: a | b, wordsets))
     # concated_embs = concat_embs(original_embs, wordlist)
-    full_concated_embs = full_concat_embs(original_embs, fullwordlist)
+    if args.meta_target == 'concat':
+        target_embs = full_concat_embs(original_embs, fullwordlist)
+    elif args.meta_target == 'overlay':
+        target_embs = full_overlay_embs(original_embs, fullwordlist)
 
-    merger = AutoencoderEmbMerger(args)
-    meta, predict, l_history, v_history = merger.encode(full_concated_embs, args.testing_size)
+    if args.method == 'autoemcoder':
+        merger = AutoencoderEmbMerger(args)
+        meta, predict, l_history, v_history = merger.encode(target_embs, args.testing_size)
+
+        output(fullwordlist, predict, 'predict_', args)
+        output(fullwordlist, target_embs, 'target_' + args.meta_target + '_', args)
+
+        with open('l_' + args.result, 'wb') as csvfile:
+            writer = csv.writer(csvfile, delimiter=',')
+            for l in l_history:
+                writer.writerow([l])
+        with open('v_' + args.result, 'wb') as csvfile:
+            writer = csv.writer(csvfile, delimiter=',')
+            for v in v_history:
+                writer.writerow([v])
+    elif args.method == 'svd':
+        merger = AutoencoderEmbMerger(args)
+        meta = merger.encode(target_embs)
 
     output(fullwordlist, meta, '', args)
-    output(fullwordlist, predict, 'predict_', args)
-    output(fullwordlist, full_concated_embs, 'concat_all_', args)
-
-    with open('l_' + args.result, 'wb') as csvfile:
-        writer = csv.writer(csvfile, delimiter=',')
-        for l in l_history:
-            writer.writerow([l])
-    with open('v_' + args.result, 'wb') as csvfile:
-        writer = csv.writer(csvfile, delimiter=',')
-        for v in v_history:
-            writer.writerow([v])
 
     logging.info('All Done, Cheers!')
